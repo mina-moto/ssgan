@@ -1,3 +1,4 @@
 sg/
 .DS_Store
 images/*
+saved_model/*

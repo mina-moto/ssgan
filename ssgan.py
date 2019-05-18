@@ -104,7 +104,7 @@ class SGAN:
         return Model(img, [valid, label])
 
 #
-    def train(self, iterations=500, batch_size=32, interval=10):
+    def train(self, iterations=200, batch_size=32, interval=10):
         # Load the dataset
         (X_train, y_train), (_, _) = mnist.load_data()
         # Rescale -1 to 1
@@ -112,65 +112,55 @@ class SGAN:
         X_train = np.expand_dims(X_train, axis=3)#28*28*60000
         y_train = y_train.reshape(-1, 1)# 1*60000
 
-        #60000枚から1000枚に
-        X_train=X_train[0:500]
-        y_train=y_train[0:500]
-        # Class weights:
-        # To balance the difference in occurences of digit class labels.
-        # 50% of labels that the discriminator trains on are 'fake'.
-        # Weight = 1 / frequency
-        half_batch = batch_size / 2#16
-        cw1 = {0: 1, 1: 1}
-        # cw2 = {i: self.num_classes / half_batch for i in range(self.num_classes)}
-        cw2[self.num_classes] = 1 / half_batch
+        #60000枚から2000枚に
+        X_train=X_train[0:2000]
+        y_train=y_train[0:2000]
 
-        # print(half_batch),16
-        # print(cw1),{0: 1, 1: 1}
-        print(cw2),{0: 0.625, 1: 0.625, 2: 0.625, 3: 0.625, 4: 0.625, 5: 0.625, 6: 0.625, 7: 0.625, 8: 0.625, 9: 0.625, 10: 0.0625}
+        # Class weights:
+        cw1 = {0: 1, 1: 1}
+        cw2 = np.ones((self.num_classes+1, 1))
+        cw2[self.num_classes] = 1 / self.num_classes
 
         # Adversarial ground truths
-        valid = np.ones((batch_size, 1))
+        real = np.ones((batch_size, 1))
         fake = np.zeros((batch_size, 1))
 
         for iteration in range(iterations):
-
-            # ---------------------
-            #  Train Discriminator
-            # ---------------------
-
             # Select a random batch of images
             idx = np.random.randint(0, X_train.shape[0], batch_size)
-            imgs = X_train[idx]
+            real_imgs = X_train[idx]
 
             # Sample noise and generate a batch of new images
             noise = np.random.normal(0, 1, (batch_size, self.latent_dim))
-            gen_imgs = self.generator.predict(noise)#28*28の画像1枚，batch_size個のデータ
+            gen_imgs = self.generator.predict(noise)#生成された28*28の画像
 
             # One-hot encoding of labels
-            #実際の画像データの正解ラベル(n+1番目は必ず0)
-            labels = to_categorical(y_train[idx], num_classes=self.num_classes+1)
+            #実際の画像データの正解ラベル
+            real_labels = to_categorical(y_train[idx], num_classes=self.num_classes+1)
             #生成されたデータの正解ラベル(n+1番目が1)
             fake_labels = to_categorical(np.full((batch_size, 1), self.num_classes), num_classes=self.num_classes+1)
 
-            d_loss_real = self.discriminator.train_on_batch(imgs, [valid, labels])
-            d_loss_fake = self.discriminator.train_on_batch(gen_imgs, [fake, fake_labels])
 
-            # print("d_loss_real")
-            # # print(d_loss_fake)
-            d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)#fake,realの平均をとる
+            imgs=np.concatenate([real_imgs,gen_imgs])#discriminatorへの入力
+            valid=np.concatenate([real,fake])#入力画像の真偽
+            labels=np.concatenate([real_labels,fake_labels])#入力画像の正解ラベル
+            # ---------------------
+            #  Train Discriminator
+            # ---------------------
+            # d_loss=self.discriminator.train_on_batch(imgs, [valid, labels])
+            d_loss=self.discriminator.train_on_batch(imgs, [valid, labels],class_weight=[cw1,cw2])
 
 
             # ---------------------
             #  Train Generator
             # ---------------------
-
-            # g_loss = self.combined.train_on_batch(noise, valid, class_weight=[cw1, cw2])
-            g_loss = self.combined.train_on_batch(noise, valid)
+            g_loss = self.combined.train_on_batch(noise, real)
 
             # If at save interval => save generated image samples
             if iteration % interval == 0:
                 print ("%d [D loss: %f, acc: %.2f%%, op_acc: %.2f%%] [G loss: %f]" % (iteration, d_loss[0], 100*d_loss[3], 100*d_loss[4], g_loss))
                 self.sample_images(iteration)
+                self.save_model()
 
     def sample_images(self, iteration):
         r, c = 5, 5
