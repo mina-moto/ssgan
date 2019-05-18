@@ -121,12 +121,12 @@ class SGAN:
         # Weight = 1 / frequency
         half_batch = batch_size / 2#16
         cw1 = {0: 1, 1: 1}
-        cw2 = {i: self.num_classes / half_batch for i in range(self.num_classes)}
+        # cw2 = {i: self.num_classes / half_batch for i in range(self.num_classes)}
         cw2[self.num_classes] = 1 / half_batch
 
         # print(half_batch),16
         # print(cw1),{0: 1, 1: 1}
-        # print(cw2),{0: 0.625, 1: 0.625, 2: 0.625, 3: 0.625, 4: 0.625, 5: 0.625, 6: 0.625, 7: 0.625, 8: 0.625, 9: 0.625, 10: 0.0625}
+        print(cw2),{0: 0.625, 1: 0.625, 2: 0.625, 3: 0.625, 4: 0.625, 5: 0.625, 6: 0.625, 7: 0.625, 8: 0.625, 9: 0.625, 10: 0.0625}
 
         # Adversarial ground truths
         valid = np.ones((batch_size, 1))
@@ -151,7 +151,7 @@ class SGAN:
             labels = to_categorical(y_train[idx], num_classes=self.num_classes+1)
             #生成されたデータの正解ラベル(n+1番目が1)
             fake_labels = to_categorical(np.full((batch_size, 1), self.num_classes), num_classes=self.num_classes+1)
-            
+
             d_loss_real = self.discriminator.train_on_batch(imgs, [valid, labels])
             d_loss_fake = self.discriminator.train_on_batch(gen_imgs, [fake, fake_labels])
 
