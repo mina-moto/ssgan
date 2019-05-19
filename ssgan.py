@@ -67,18 +67,13 @@ class SGAN:
         model.add(BatchNormalization(momentum=0.8))
         model.add(Conv2D(1, kernel_size=3, padding="same"))
         model.add(Activation("tanh"))
-
         model.summary()
-
         noise = Input(shape=(self.latent_dim,))
         img = model(noise)
-
         return Model(noise, img)
 
     def build_discriminator(self):
-
         model = Sequential()
-
         model.add(Conv2D(32, kernel_size=3, strides=2, input_shape=self.img_shape, padding="same"))
         model.add(LeakyReLU(alpha=0.2))
         model.add(Dropout(0.25))
@@ -100,26 +95,20 @@ class SGAN:
         features = model(img)
         valid = Dense(1, activation="sigmoid")(features)
         label = Dense(self.num_classes+1, activation="softmax")(features)
-
         return Model(img, [valid, label])
 
 #
-    def train(self, iterations=200, batch_size=32, interval=10):
+    def train(self, iterations=2000, batch_size=32, interval=100):
         # Load the dataset
         (X_train, y_train), (_, _) = mnist.load_data()
         # Rescale -1 to 1
         X_train = (X_train.astype(np.float32) - 127.5) / 127.5
-        X_train = np.expand_dims(X_train, axis=3)#28*28*60000
-        y_train = y_train.reshape(-1, 1)# 1*60000
+        X_train = np.expand_dims(X_train, axis=3)
+        y_train = y_train.reshape(-1, 1)
 
-        #60000枚から2000枚に
-        X_train=X_train[0:2000]
-        y_train=y_train[0:2000]
-
-        # Class weights:
-        cw1 = {0: 1, 1: 1}
-        cw2 = np.ones((self.num_classes+1, 1))
-        cw2[self.num_classes] = 1 / self.num_classes
+        #60000枚から10000枚に
+        X_train=X_train[0:10000]
+        y_train=y_train[0:10000]
 
         # Adversarial ground truths
         real = np.ones((batch_size, 1))
@@ -140,16 +129,14 @@ class SGAN:
             #生成されたデータの正解ラベル(n+1番目が1)
             fake_labels = to_categorical(np.full((batch_size, 1), self.num_classes), num_classes=self.num_classes+1)
 
-
             imgs=np.concatenate([real_imgs,gen_imgs])#discriminatorへの入力
             valid=np.concatenate([real,fake])#入力画像の真偽
             labels=np.concatenate([real_labels,fake_labels])#入力画像の正解ラベル
+
             # ---------------------
             #  Train Discriminator
             # ---------------------
-            # d_loss=self.discriminator.train_on_batch(imgs, [valid, labels])
-            d_loss=self.discriminator.train_on_batch(imgs, [valid, labels],class_weight=[cw1,cw2])
-
+            d_loss=self.discriminator.train_on_batch(imgs, [valid, labels])
 
             # ---------------------
             #  Train Generator
@@ -160,7 +147,6 @@ class SGAN:
             if iteration % interval == 0:
                 print ("%d [D loss: %f, acc: %.2f%%, op_acc: %.2f%%] [G loss: %f]" % (iteration, d_loss[0], 100*d_loss[3], 100*d_loss[4], g_loss))
                 self.sample_images(iteration)
-                self.save_model()
 
     def sample_images(self, iteration):
         r, c = 5, 5
@@ -199,3 +185,4 @@ class SGAN:
 if __name__ == '__main__':
     sgan = SGAN()
     sgan.train()
+    sgan.save_model()
