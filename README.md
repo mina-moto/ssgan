@@ -25,6 +25,8 @@ pip install -r requirements.txt
 ```shell
 python ssgan.py
 ```
+
+### Result
 train process each 100 iteration:
 
 <img src="images/mnist_each_100.gif" width="640px">
