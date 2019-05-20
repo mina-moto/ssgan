@@ -1,5 +1,6 @@
 # ssgan
-Semi-Supervised GAN
+Train mnist dataset with Semi-Supervised GAN.
+Model and generated images of progress is saved.
 
 ## Requirements
 - python3
@@ -15,12 +16,12 @@ git clone https://github.com/mina-moto/ssgan
 
 ### Install required libraries
 ```shell
-pip freeze > requirements.txt
+pip install -r requirements.txt
 ```
 
 ## Usage
 
-### Train mnist and save images and model of progress
+### Train and save progress
 ```shell
 python ssgan.py
 ```
